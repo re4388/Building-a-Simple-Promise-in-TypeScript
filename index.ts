@@ -2,11 +2,10 @@ import { makeApiCall } from './myAjax';
 
 makeApiCall()
   .then((user) => {
-    console.log('In the first .then()');
-
     return user;
   })
   .then((user) => {
+    // you get the passed user here
     console.log(
       `User ${user.username}'s favorite number is ${user.favoriteNumber}`
     );

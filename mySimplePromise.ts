@@ -2,26 +2,25 @@ import { ErrorResponse } from './types/ResponseType';
 import { ResolveFn, ExecutionFns, errorFn } from './types/PromiseType';
 
 export class PromiseSimple {
-  resolveFnArray: ResolveFn[];
+  resolveFns: ResolveFn[];
 
-  constructor(executionCallBacks: ExecutionFns) {
-    this.resolveFnArray = [];
-    this.callFnInArrayAndReassignResult = this.callFnInArrayAndReassignResult.bind(
-      this
-    );
+  // we will use this like // new PromiseSimple((resolve, reject) => {resolve(..) & reject(..) }
+  constructor(resolveAndRejectCBs: ExecutionFns) {
+    this.resolveFns = [];
+    this.onResolve = this.onResolve.bind(this);
     this.onReject = this.onReject.bind(this);
-    executionCallBacks(this.callFnInArrayAndReassignResult, this.onReject); // this is why you have this line: new PromiseSimple((resolve, reject) => {}
+    resolveAndRejectCBs(this.onResolve, this.onReject);
   }
 
-  private callFnInArrayAndReassignResult(value: any) {
-    let storedValue = value;
+  private onResolve(arg: any) {
+    let passingValue = arg;
 
     try {
-      this.resolveFnArray.forEach((fn) => {
-        storedValue = fn(storedValue);
+      this.resolveFns.forEach((fn) => {
+        passingValue = fn(passingValue); // key part 2: 返回值穿透 we get the returned promise value from cb's arg
       });
     } catch (error) {
-      this.resolveFnArray = [];
+      this.resolveFns = []; // clear all fns if any
       this.onReject(error);
     }
   }
@@ -30,14 +29,16 @@ export class PromiseSimple {
     this.handleError(error);
   }
 
-  public then(handleSuccess: ResolveFn) {
-    this.resolveFnArray.push(handleSuccess);
+  // key part 1: 回調函數不是直接聲明的，而是在通過後面的 then 方法傳入的
+  public then(handleSuccessFn: ResolveFn) {
+    this.resolveFns.push(handleSuccessFn);
 
     return this; // to chain multiple then() since returning the object itself
   }
 
-  public catch(handleError: errorFn) {
-    this.handleError = handleError;
+  // key part 3:錯誤冒泡, use one catch to get all possible error along the promise chain
+  public catch(handleErrorFn: errorFn) {
+    this.handleError = handleErrorFn;
 
     return this;
   }
